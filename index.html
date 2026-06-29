@@ -56,6 +56,8 @@
   .nav-brand{display:inline-flex;align-items:center;gap:9px;font-weight:760;color:var(--ink);font-size:16px;letter-spacing:.1px}
   .nav-brand .dot{width:10px;height:10px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 4px rgba(37,211,102,.30)}
   .nav-brand:hover{text-decoration:none}
+  .nav-tag{font-size:12.5px;font-weight:600;color:var(--muted);border-left:1px solid var(--line);padding-left:11px;margin-left:5px;letter-spacing:.2px}
+  @media(max-width:900px){.nav-tag{display:none}}
   .nav-links{display:flex;align-items:center;gap:24px}
   .nav-links a{font-size:14.5px;font-weight:600;color:var(--ink-2);white-space:nowrap}
   .nav-links a:hover{color:var(--brand);text-decoration:none}
@@ -295,7 +297,7 @@
 
 <nav class="topnav">
   <div class="wrap nav-inner">
-    <a class="nav-brand" href="#top"><span class="dot"></span> Natural-Joints</a>
+    <a class="nav-brand" href="#top"><span class="dot"></span> Natural-Joints <span class="nav-tag">Data QA · code · data · priors</span></a>
     <button class="nav-toggle" aria-label="Toggle menu">☰</button>
     <div class="nav-links">
       <a href="#flow">How it works</a>
@@ -310,7 +312,7 @@
 
 <header class="hero" id="top">
   <div class="wrap">
-    <div class="eyebrow">Zero-trust review for data pipelines</div>
+    <div class="eyebrow">Data QA · code · data · priors</div>
     <h1>We catch the bugs that combine data, code &amp; domain priors.</h1>
     <p class="lede">Natural-Joints reads your source data, your transformation code, and the target it produces. We don't evaluate your loops or a missing null — we evaluate how your loops understand the biology embedded in your tables.</p>
     <img class="hero-img" src="assets/nj-hero.png" alt="Natural-Joints — the guide standing between Claude Code and your data">
