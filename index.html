@@ -57,6 +57,7 @@
   .nav-brand .dot{width:10px;height:10px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 4px rgba(37,211,102,.30)}
   .nav-brand:hover{text-decoration:none}
   .nav-tag{font-size:12.5px;font-weight:600;color:var(--muted);border-left:1px solid var(--line);padding-left:11px;margin-left:5px;letter-spacing:.2px}
+  .nav-tag b{color:var(--ink);font-weight:700}
   @media(max-width:900px){.nav-tag{display:none}}
   .nav-links{display:flex;align-items:center;gap:24px}
   .nav-links a{font-size:14.5px;font-weight:600;color:var(--ink-2);white-space:nowrap}
@@ -93,9 +94,11 @@
     background:var(--brand);box-shadow:0 0 0 4px rgba(37,211,102,.30);
   }
   .eyebrow{
-    display:inline-block;font-size:12.5px;font-weight:700;letter-spacing:.13em;
-    text-transform:uppercase;color:var(--brand);margin-bottom:16px;
+    display:inline-block;font-size:13px;font-weight:800;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--brand);margin-bottom:7px;
   }
+  .hero-triad{margin:0 0 26px;font-size:15.5px;font-weight:700;color:var(--muted);letter-spacing:.02em}
+  .hero-triad b{color:var(--brand);font-weight:800}
   header.hero h1{
     font-size:clamp(30px,5vw,46px);line-height:1.1;margin:0 0 18px;
     font-weight:780;letter-spacing:-.02em;color:var(--ink);
@@ -297,7 +300,7 @@
 
 <nav class="topnav">
   <div class="wrap nav-inner">
-    <a class="nav-brand" href="#top"><span class="dot"></span> Natural-Joints <span class="nav-tag">Data QA · code · data · priors</span></a>
+    <a class="nav-brand" href="#top"><span class="dot"></span> Natural-Joints <span class="nav-tag"><b>Data QA</b> · code · data · priors</span></a>
     <button class="nav-toggle" aria-label="Toggle menu">☰</button>
     <div class="nav-links">
       <a href="#flow">How it works</a>
@@ -312,7 +315,8 @@
 
 <header class="hero" id="top">
   <div class="wrap">
-    <div class="eyebrow">Data QA · code · data · priors</div>
+    <div class="eyebrow">Data QA</div>
+    <div class="hero-triad"><b>code</b> · <b>data</b> · <b>priors</b></div>
     <h1>We catch the bugs that combine data, code &amp; domain priors.</h1>
     <p class="lede">Natural-Joints reads your source data, your transformation code, and the target it produces. We don't evaluate your loops or a missing null — we evaluate how your loops understand the biology embedded in your tables.</p>
     <img class="hero-img" src="assets/nj-hero.png" alt="Natural-Joints — the guide standing between Claude Code and your data">
