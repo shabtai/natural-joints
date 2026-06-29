@@ -414,8 +414,8 @@
   <section id="trust">
     <div class="wrap">
       <span class="tag">The trust model</span>
-      <h2>Everything it reads is read-only.</h2>
-      <p class="sub">To verify a transformation it has to see all of it — the code, the data on both ends, and the intent behind it. Every one of those is a read. The only thing it writes is the report.</p>
+      <h2>Zero risk — by construction.</h2>
+      <p class="sub">Everything it reads is read-only; the only thing it writes is the report. To verify a transformation it must see all of it — code, data on both ends, and the intent behind it — and every one of those is just a read.</p>
 
       <div class="pillars">
         <div class="pillar">
@@ -442,7 +442,7 @@
       </div>
 
       <div class="callout">
-        <strong>And the network?</strong> Outbound HTTPS only — to your model provider, and the open web when cross-checking public standards. No inbound ports, no listeners; the optional UIs bind to localhost. The single secret it needs is your model API key.
+        <strong>Run it as paranoid as you like.</strong> Drop it on an isolated — even throwaway — machine: data mounted read-only, no write credentials, and only outbound HTTPS to your model API (plus the open web for public-standard checks; deny even that and it still runs). With no write path and no inbound ports, it <em>physically cannot</em> alter, delete, or exfiltrate your data — the worst case is a wasted run. When it finishes, copy out the report and wipe the box. The only secret it ever needs is your model API key.
       </div>
     </div>
   </section>
