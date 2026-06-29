@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Run a data audit without trusting it — Natural-Joints</title>
+<meta name="description" content="How to run a full Natural-Joints data audit under a zero-trust model: read-only code from git, read-only data access, outbound-only network. Install in two lines, audit in three commands.">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Natural-Joints — verify the transformation, not just the data">
+<meta property="og:description" content="We catch the bugs that combine data, code & domain priors. Read-only, zero-trust review for data pipelines.">
+<meta property="og:image" content="https://shabtai.github.io/natural-joints/assets/nj-hero.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://shabtai.github.io/natural-joints/assets/nj-hero.png">
+<style>
+  :root{
+    --ink:#111b21;
+    --ink-2:#3b4a54;
+    --muted:#667781;
+    --line:#e2e6e3;
+    --bg:#ffffff;
+    --bg-soft:#f0f3f0;
+    --brand:#128c7e;        /* WhatsApp teal-green */
+    --brand-2:#25d366;      /* WhatsApp bright green */
+    --brand-soft:#dcf8c6;   /* message bubble */
+    --brand-deep:#075e54;   /* deep header green */
+    --accent:#075e54;
+    --warn:#d97706;
+    --warn-soft:#fff3e6;
+    --code-bg:#f0f4ef;
+    --code-ink:#2f3b39;
+    --code-border:#dde6dd;
+    --radius:14px;
+    --maxw:920px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);
+    background:var(--bg);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px}
+  a{color:var(--brand);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* Top nav */
+  .topnav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.82);backdrop-filter:saturate(160%) blur(10px);-webkit-backdrop-filter:saturate(160%) blur(10px);border-bottom:1px solid var(--line)}
+  .nav-inner{display:flex;align-items:center;justify-content:space-between;height:62px}
+  .nav-brand{display:inline-flex;align-items:center;gap:9px;font-weight:760;color:var(--ink);font-size:16px;letter-spacing:.1px}
+  .nav-brand .dot{width:10px;height:10px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 4px rgba(37,211,102,.30)}
+  .nav-brand:hover{text-decoration:none}
+  .nav-links{display:flex;align-items:center;gap:24px}
+  .nav-links a{font-size:14.5px;font-weight:600;color:var(--ink-2);white-space:nowrap}
+  .nav-links a:hover{color:var(--brand);text-decoration:none}
+  .nav-cta{background:var(--brand);color:#fff !important;padding:9px 16px;border-radius:9px}
+  .nav-cta:hover{background:var(--accent)}
+  .nav-toggle{display:none;background:none;border:none;font-size:24px;line-height:1;color:var(--ink);cursor:pointer;padding:4px 6px}
+  main section,header.hero{scroll-margin-top:66px}
+  @media(max-width:820px){
+    .nav-links{position:absolute;top:62px;left:0;right:0;flex-direction:column;align-items:stretch;gap:0;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 14px 30px rgba(30,35,51,.08);padding:6px 0;display:none}
+    .nav-links.open{display:flex}
+    .nav-links a{padding:13px 22px}
+    .nav-cta{margin:8px 22px 10px;text-align:center}
+    .nav-toggle{display:block}
+  }
+
+  /* Header / hero */
+  header.hero{
+    background:
+      radial-gradient(1100px 460px at 80% -10%, rgba(37,211,102,.20), transparent 62%),
+      radial-gradient(720px 360px at 2% 4%, rgba(52,183,241,.08), transparent 60%),
+      linear-gradient(180deg,#ffffff 0%, #eef5ef 100%);
+    color:var(--ink);
+    padding:64px 0 72px;
+    border-bottom:1px solid var(--line);
+  }
+  .brand{
+    display:inline-flex;align-items:center;gap:10px;
+    font-weight:700;letter-spacing:.2px;color:var(--brand);font-size:15px;
+    margin-bottom:30px;
+  }
+  .brand .dot{
+    width:11px;height:11px;border-radius:50%;
+    background:var(--brand);box-shadow:0 0 0 4px rgba(37,211,102,.30);
+  }
+  .eyebrow{
+    display:inline-block;font-size:12.5px;font-weight:700;letter-spacing:.13em;
+    text-transform:uppercase;color:var(--brand);margin-bottom:16px;
+  }
+  header.hero h1{
+    font-size:clamp(30px,5vw,46px);line-height:1.1;margin:0 0 18px;
+    font-weight:780;letter-spacing:-.02em;color:var(--ink);
+  }
+  header.hero p.lede{
+    font-size:clamp(17px,2.4vw,20px);color:var(--ink-2);max-width:48ch;margin:0 0 28px;
+  }
+  .hero-img{display:block;width:100%;max-width:900px;height:auto;border-radius:16px;border:1px solid var(--line);box-shadow:0 20px 54px rgba(7,94,84,.18)}
+  .cta-row{display:flex;flex-wrap:wrap;gap:12px}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:12px 20px;border-radius:10px;font-weight:650;font-size:15px;
+    border:1px solid transparent;cursor:pointer;
+  }
+  .btn-primary{background:var(--brand);color:#fff}
+  .btn-primary:hover{background:var(--accent);text-decoration:none}
+  .btn-ghost{border-color:#c9c8ea;color:var(--brand)}
+  .btn-ghost:hover{border-color:var(--brand);text-decoration:none}
+
+  /* Sections */
+  main section{padding:54px 0;border-bottom:1px solid var(--line)}
+  main section:last-of-type{border-bottom:none}
+  h2{font-size:clamp(22px,3.2vw,30px);letter-spacing:-.01em;margin:0 0 10px}
+  h2 .num{color:var(--brand);font-variant-numeric:tabular-nums;margin-right:10px;font-weight:800}
+  .sub{color:var(--muted);font-size:16.5px;margin:0 0 28px;max-width:62ch}
+
+  /* Trust pillars */
+  .pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .pillar{
+    background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);
+    padding:22px 20px;position:relative;overflow:hidden;
+  }
+  .pillar .ico{
+    width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+    background:var(--brand-soft);color:var(--brand);margin-bottom:14px;font-size:19px;
+  }
+  .pillar h3{margin:0 0 6px;font-size:17px}
+  .pillar p{margin:0;color:var(--ink-2);font-size:14.5px}
+  .pillar .grant{
+    margin-top:14px;font-size:12.5px;font-weight:650;color:var(--brand);
+    background:#fff;border:1px dashed var(--brand-2);border-radius:8px;padding:7px 10px;
+  }
+  .pillar .deny{
+    margin-top:8px;font-size:12.5px;color:var(--muted);
+  }
+
+  /* Code blocks */
+  pre{
+    background:var(--code-bg);color:var(--code-ink);border-radius:12px;
+    padding:18px 20px;overflow-x:auto;font-size:13.5px;line-height:1.65;
+    font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    border:1px solid var(--code-border);margin:0 0 14px;
+  }
+  pre .c{color:#8a9a93}           /* comment */
+  pre .k{color:#0e7d6f}           /* command/keyword */
+  pre .s{color:#b45309}           /* string/value */
+  pre .f{color:#0a8fc2}           /* flag */
+  code.inline{
+    background:var(--brand-soft);color:var(--accent);border-radius:6px;
+    padding:1.5px 6px;font-size:.92em;font-family:"SF Mono",ui-monospace,Menlo,monospace;
+  }
+
+  /* Steps */
+  .steps{counter-reset:step;display:grid;gap:18px}
+  .step{
+    display:grid;grid-template-columns:44px 1fr;gap:18px;align-items:start;
+  }
+  .step .n{
+    counter-increment:step;width:44px;height:44px;border-radius:50%;
+    background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:18px;
+  }
+  .step .n::before{content:counter(step)}
+  .step h3{margin:4px 0 8px;font-size:18px}
+  .step p{margin:0 0 12px;color:var(--ink-2)}
+
+  /* Guarantees table */
+  .guarantees{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .gcol{padding:6px 0}
+  .gcol h3{margin:0;padding:16px 22px;font-size:15px;letter-spacing:.02em}
+  .gcol.does h3{background:var(--brand-soft);color:var(--accent)}
+  .gcol.never h3{background:var(--warn-soft);color:#9a3412}
+  .gcol ul{list-style:none;margin:0;padding:8px 22px 20px}
+  .gcol li{padding:9px 0 9px 26px;position:relative;font-size:14.5px;color:var(--ink-2);border-top:1px solid var(--line)}
+  .gcol li:first-child{border-top:none}
+  .gcol.does li::before{content:"✓";position:absolute;left:0;color:var(--brand);font-weight:800}
+  .gcol.never li::before{content:"✕";position:absolute;left:0;color:var(--warn);font-weight:800}
+
+  .callout{
+    background:var(--brand-soft);border:1px solid #bfe3c8;border-left:4px solid var(--brand);
+    border-radius:10px;padding:16px 20px;margin:22px 0 0;color:#0a4a3f;font-size:14.5px;
+  }
+  .callout strong{color:var(--accent)}
+
+  /* Recommended (Claude Code) card */
+  .recommended{
+    background:linear-gradient(180deg,#128c7e 0%,#075e54 100%);
+    color:#e9f7f1;border:1px solid #1a6b60;border-radius:var(--radius);
+    padding:24px 24px 22px;margin:0 0 18px;position:relative;overflow:hidden;
+  }
+  .recommended::after{
+    content:"";position:absolute;right:-60px;top:-60px;width:200px;height:200px;border-radius:50%;
+    background:radial-gradient(circle,rgba(37,211,102,.35),transparent 65%);
+  }
+  .recommended .pill{
+    display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:800;
+    letter-spacing:.08em;text-transform:uppercase;color:#06382f;background:#25d366;
+    border-radius:999px;padding:4px 11px;margin-bottom:14px;
+  }
+  .recommended h3{margin:0 0 8px;font-size:19px;color:#fff}
+  .recommended p{margin:0 0 14px;color:#cdeee4;font-size:15px;max-width:60ch}
+  .recommended pre{margin:0}
+  .recommended .nb{margin:12px 0 0;font-size:13.5px;color:#9fc9bf}
+  .or-direct{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0 10px}
+
+  /* Flow diagram */
+  .flow{display:flex;align-items:stretch;gap:6px;flex-wrap:wrap;margin:6px 0 0}
+  .flow .node{flex:1 1 200px;background:var(--bg-soft);border:1px solid var(--line);border-radius:12px;padding:18px 18px 16px;text-align:left}
+  .flow .node.code{border-color:#bfe3dd;background:#eaf6f3}
+  .flow .node.target{border-color:#cdeac0;background:var(--brand-soft)}
+  .flow .nlabel{font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+  .flow .node.code .nlabel{color:#0e7d6f}
+  .flow .node.target .nlabel{color:var(--brand)}
+  .flow .ntitle{font-size:17px;font-weight:700;margin-bottom:4px}
+  .flow .nmeta{font-size:13px;color:var(--ink-2)}
+  .flow .arrow{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:22px;flex:0 0 auto}
+  .verify-band{margin-top:8px;background:var(--brand-deep);color:#d7ece6;border-radius:12px;padding:16px 20px;font-size:15px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .verify-band .vk{color:#7ee0a6;font-weight:700}
+  .flow-frame{position:relative;border:2px dashed var(--brand-2);border-radius:18px;padding:32px 16px 16px;margin-top:10px;background:linear-gradient(180deg,rgba(18,140,126,.08),rgba(18,140,126,0) 42%)}
+  .flow-frame .frame-label{position:absolute;top:-14px;left:22px;background:var(--brand);color:#fff;font-size:11.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:6px 15px;border-radius:999px;box-shadow:0 2px 8px rgba(18,140,126,.3)}
+  .flow-frame .frame-note{position:absolute;bottom:-11px;right:22px;background:var(--bg);color:var(--brand);font-size:12px;font-weight:650;padding:2px 12px;border:1px solid #cfe8df;border-radius:999px}
+  .flow-frame .flow{margin-top:0}
+  @media(max-width:680px){
+    .flow{flex-direction:column}
+    .flow .arrow{transform:rotate(90deg);padding:2px 0}
+    .flow-frame .frame-note{position:static;display:inline-block;margin-top:12px}
+  }
+
+  /* Difference / bug example */
+  .layers{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 0;align-items:stretch}
+  .layers .lyr{flex:1 1 150px;border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--bg-soft)}
+  .layers .lyr b{display:block;font-size:14.5px;margin-bottom:3px}
+  .layers .lyr span{font-size:13px;color:var(--muted)}
+  .layers .plus{display:flex;align-items:center;color:var(--brand);font-weight:800;font-size:20px}
+  .bug-example{background:#fff;border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:12px;padding:20px 22px;margin:20px 0 0}
+  .bug-example .who{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--warn);margin-bottom:10px}
+  .bug-example p{margin:0 0 8px;font-size:15.5px;color:var(--ink)}
+  .bug-example .miss{color:var(--ink-2);font-size:14px;margin:0}
+  @media(max-width:680px){.layers{flex-direction:column}.layers .plus{transform:rotate(90deg)}}
+
+  /* Checks */
+  .checks{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;margin-top:4px}
+  .check{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:22px 20px;display:flex;flex-direction:column}
+  .check.is-strength{border-color:var(--brand-2);background:var(--brand-soft);box-shadow:0 0 0 1px var(--brand-2)}
+  .check .cn{width:30px;height:30px;border-radius:8px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;margin-bottom:11px}
+  .check.is-strength .cn{background:var(--brand)}
+  .check .badge{display:inline-block;align-self:flex-start;font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:3px 9px;border-radius:999px;margin-bottom:11px}
+  .check .badge.conv{background:#eef1ef;color:var(--muted)}
+  .check .badge.strength{background:var(--brand);color:#fff}
+  .check h3{margin:0 0 7px;font-size:17px}
+  .check p{margin:0;color:var(--ink-2);font-size:14.5px}
+  .check .eg{margin-top:14px;font-size:13.5px;color:var(--ink);background:#fff;border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:8px;padding:10px 12px}
+  .check .eg b{color:var(--warn);font-size:11px;letter-spacing:.06em;text-transform:uppercase;display:block;margin-bottom:4px}
+  @media(max-width:760px){.checks{grid-template-columns:1fr}}
+
+  /* Section separation */
+  main section.alt{background:var(--bg-soft)}
+  main section{padding:60px 0}
+
+  /* Real-catch band (deep WhatsApp green) */
+  .band-dark{background:linear-gradient(180deg,#075e54 0%,#0a6d61 100%);color:#d7ece6;border-bottom:none !important}
+  .band-dark h2{color:#fff}
+  .tag-light{display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#b9f6ca;background:rgba(37,211,102,.16);border:1px solid rgba(37,211,102,.42);border-radius:999px;padding:4px 12px;margin-bottom:16px}
+  .catch-card{background:rgba(255,255,255,.06);border:1px solid #1a6b60;border-left:4px solid #25d366;border-radius:12px;padding:22px 24px;margin-top:6px;max-width:760px}
+  .catch-card p{margin:0 0 10px;font-size:16px;color:#d6ece4}
+  .catch-card p:last-child{margin-bottom:0}
+  .catch-card b{color:#fff}
+  .catch-card code{background:rgba(37,211,102,.20);color:#b9f6ca;border-radius:6px;padding:1.5px 8px;font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:.9em}
+  .catch-card .punch{color:#a7c9c0;font-size:14px}
+  .band-dark .intro{font-size:16px;color:#c2ded6;max-width:760px;margin:0 0 16px}
+  .catch-code{max-width:760px;margin:0 0 16px}
+
+  .tag{display:inline-block;font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--brand);background:var(--brand-soft);border-radius:999px;padding:3px 10px;margin-bottom:14px}
+
+  /* Footer */
+  footer{background:var(--brand-deep);color:#a9c8c0;padding:48px 0;text-align:center}
+  footer .brand{color:#dff5ec;margin-bottom:14px}
+  footer a{color:#7ee0a6}
+  footer .small{font-size:13px;color:#7ea69c;margin-top:18px}
+
+  @media(max-width:760px){
+    .pillars{grid-template-columns:1fr}
+    .guarantees{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="wrap nav-inner">
+    <a class="nav-brand" href="#top"><span class="dot"></span> Natural-Joints</a>
+    <button class="nav-toggle" aria-label="Toggle menu">☰</button>
+    <div class="nav-links">
+      <a href="#flow">How it works</a>
+      <a href="#difference">What it catches</a>
+      <a href="#catch">Real catch</a>
+      <a href="#trust">Trust model</a>
+      <a href="#install">Install</a>
+      <a class="nav-cta" href="#audit">Run an audit →</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div class="eyebrow">Zero-trust review for data pipelines</div>
+    <h1>We catch the bugs that combine data, code &amp; domain priors.</h1>
+    <p class="lede">Natural-Joints reads your source data, your transformation code, and the target it produces. We don't evaluate your loops or a missing null — we evaluate how your loops understand the biology embedded in your tables.</p>
+    <img class="hero-img" src="assets/nj-hero.png" alt="Natural-Joints — the guide standing between Claude Code and your data">
+  </div>
+</header>
+
+<main>
+
+  <!-- THE FLOW -->
+  <section id="flow">
+    <div class="wrap">
+      <span class="tag">The flow we audit</span>
+      <h2>We audit the whole transformation — end to end.</h2>
+      <p class="sub">Your data starts somewhere, code reshapes it, and a target comes out. Run it on a change before that change goes to review — and instead of glancing at the target, Natural-Joints checks it four ways.</p>
+
+      <div class="flow-frame">
+        <span class="frame-label">Priors · domain knowledge &amp; reference values</span>
+        <div class="flow">
+          <div class="node source">
+            <div class="nlabel">Source</div>
+            <div class="ntitle">Data + context</div>
+            <div class="nmeta">tables · context docs · Slack · git history</div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="node code">
+            <div class="nlabel">Transform</div>
+            <div class="ntitle">The code</div>
+            <div class="nmeta">pulled from git, read-only</div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="node target">
+            <div class="nlabel">Target</div>
+            <div class="ntitle">Output data</div>
+            <div class="nmeta">the result</div>
+          </div>
+        </div>
+        <div class="verify-band"><span class="vk">We verify each step:</span> given this data and this domain, does this code actually produce the right target?</div>
+        <span class="frame-note">priors inform every step</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT MAKES IT DIFFERENT -->
+  <section id="difference" class="alt">
+    <div class="wrap">
+      <span class="tag">How we check the target</span>
+      <h2>Four ways to know the target is right.</h2>
+      <p class="sub">A linter checks syntax; a schema test catches a null. We check whether the numbers are actually <em>correct</em> — against the code, the data, and the domain's priors.</p>
+
+      <div class="checks">
+        <div class="check">
+          <div class="cn">1</div>
+          <h3>Compare the target to priors</h3>
+          <p>Hold each result up against what the domain expects — reference values, known distributions, plausible ranges. A number that looks fine alone but contradicts the prior gets flagged.</p>
+          <div class="eg"><b>e.g.</b> a computed rate that's plausible on its own but far off the known base rate for that cohort.</div>
+        </div>
+        <div class="check">
+          <div class="cn">2</div>
+          <span class="badge conv">conventional debugging</span>
+          <h3>Verify the code itself</h3>
+          <p>Classic code bugs that make the transform do the wrong thing — independent of what the data means. The debugging a careful engineer already does.</p>
+          <div class="eg"><b>e.g.</b> a missing loop that processes only the first batch instead of all of them.</div>
+        </div>
+        <div class="check is-strength">
+          <div class="cn">3</div>
+          <span class="badge strength">Natural-Joints strength</span>
+          <h3>Where the code meets the data</h3>
+          <p>The bugs that only appear when you understand <em>both</em> the code and what the data actually means. This is what Natural-Joints is built for.</p>
+          <div class="eg"><b>e.g.</b> disease&nbsp;A needs a cohort filter the code never applies — its active flag lives in a column the transform ignored.</div>
+        </div>
+        <div class="check">
+          <div class="cn">4</div>
+          <h3>Catch corrupted source data</h3>
+          <p>Sometimes the input is already wrong. Deep understanding lets us see when the same thing is recorded two ways, or when a value simply can't be real.</p>
+          <div class="eg"><b>e.g.</b> one disease under two names so a join silently splits it — or a male result in a women's-only panel, an impossible weight or birth date.</div>
+        </div>
+      </div>
+
+      <div class="callout">
+        <strong>And our priors keep growing.</strong> Natural-Joints continuously learns biological priors and biological-data standards — reference ranges, ontologies, naming conventions, plausible distributions — so every audit is sharper than the last.
+      </div>
+    </div>
+  </section>
+
+  <!-- REAL CATCH -->
+  <section id="catch" class="band-dark">
+    <div class="wrap">
+      <span class="tag-light">A real catch</span>
+      <h2>85% of the records feeding a primary clinical endpoint were wrong.</h2>
+      <p class="intro">Production-grade code from a public FDA submission pilot. Join, parameter, visit window, sort — all correct. No NaNs, no type errors.</p>
+<pre class="catch-code">data = (
+    adlbc.join(adsl_eff, on=<span class="s">"USUBJID"</span>, how=<span class="s">"inner"</span>)
+    .filter((pl.col(<span class="s">"PARAMCD"</span>) == <span class="s">"GLUC"</span>) &amp; (pl.col(<span class="s">"AVISITN"</span>) &lt;= 24))
+    .sort([<span class="s">"USUBJID"</span>, <span class="s">"AVISITN"</span>])
+)</pre>
+      <div class="catch-card">
+        <p>Only <b>309</b> of the table's <b>2,054</b> glucose records belong to the primary analysis. The rest are unscheduled visits, repeat draws, and duplicates — separated by one column, <code>ANL01FL</code> (the CDISC ADaM analysis flag), lost among 298 others. The code never filters on it.</p>
+        <p class="punch"><b>85% of the records feeding the endpoint are wrong.</b> A semantic-contract bug no unit test catches — Natural-Joints found it autonomously.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- THE TRUST MODEL -->
+  <section id="trust">
+    <div class="wrap">
+      <span class="tag">The trust model</span>
+      <h2>Everything it reads is read-only.</h2>
+      <p class="sub">To verify a transformation it has to see all of it — the code, the data on both ends, and the intent behind it. Every one of those is a read. The only thing it writes is the report.</p>
+
+      <div class="pillars">
+        <div class="pillar">
+          <div class="ico">⌥</div>
+          <h3>Code &amp; history</h3>
+          <p>The transform and the git history around it — fetched over git, read-only. Every line open to inspect before it runs.</p>
+          <div class="grant">GRANT: read-only git</div>
+          <div class="deny">No write-back to your repos.</div>
+        </div>
+        <div class="pillar">
+          <div class="ico">▤</div>
+          <h3>Data, source &amp; target</h3>
+          <p>It samples both ends of the pipeline with a <strong>viewer-only</strong> credential. It profiles; it never mutates a row.</p>
+          <div class="grant">GRANT: read-only data role</div>
+          <div class="deny">Findings go to a separate location.</div>
+        </div>
+        <div class="pillar">
+          <div class="ico">❏</div>
+          <h3>Context &amp; intent</h3>
+          <p>Context docs, Slack, tickets — wherever the domain knowledge lives. Read-only, to learn what the transform was meant to do.</p>
+          <div class="grant">GRANT: read-only context</div>
+          <div class="deny">Nothing is posted back.</div>
+        </div>
+      </div>
+
+      <div class="callout">
+        <strong>And the network?</strong> Outbound HTTPS only — to your model provider, and the open web when cross-checking public standards. No inbound ports, no listeners; the optional UIs bind to localhost. The single secret it needs is your model API key.
+      </div>
+    </div>
+  </section>
+
+  <!-- INSTALL -->
+  <section id="install" class="alt">
+    <div class="wrap">
+      <h2><span class="num">A</span>Install it</h2>
+      <p class="sub">You don't have to know the package layout, the right extras, or how to wire a key. The simplest path is to let an agent do it — and watch every step.</p>
+
+      <div class="recommended">
+        <span class="pill">◆ Recommended</span>
+        <h3>Let Claude Code guide the install</h3>
+        <p>Open <a href="https://claude.com/claude-code" style="color:#7ee0a6">Claude Code</a> in an empty folder and just ask. It fetches the engine over read-only git, installs the package, picks the right extras for your data, and prompts you for the one secret it needs.</p>
+<pre><span class="s">"Install Natural-Joints (the semantic-enricher engine)</span>
+<span class="s"> and walk me through running my first audit."</span></pre>
+        <p class="nb">You approve each command as it runs. The only secret it ever asks for is your model API key — nothing else touches your machine.</p>
+      </div>
+
+      <p class="or-direct">— or install it directly —</p>
+<pre><span class="k">pip install</span> <span class="s">"semantic-enricher[gcs]"</span>      <span class="c"># or [iceberg], [r], [sas], [clinical]</span>
+<span class="k">export</span> ANTHROPIC_API_KEY=<span class="s">sk-ant-...</span>     <span class="c"># or GOOGLE_API_KEY=... — the only secret needed</span></pre>
+    </div>
+  </section>
+
+  <!-- AUDIT IN THREE COMMANDS -->
+  <section id="audit">
+    <div class="wrap">
+      <h2><span class="num">B</span>From zero to an audit report</h2>
+      <p class="sub">Same as the install — the simplest path is to ask Claude Code. It enriches your data, reads the code against that understanding, and writes the report. You approve every step.</p>
+
+      <div class="recommended">
+        <span class="pill">◆ Recommended</span>
+        <h3>Ask Claude Code to run the audit</h3>
+        <p>Open <a href="https://claude.com/claude-code" style="color:#7ee0a6">Claude Code</a> where your data and code live, and describe the audit. It runs the deep-understanding pass, checks the transformation against it, and surfaces the findings — all read-only.</p>
+<pre><span class="s">"Audit this pipeline — enrich the source data, then check</span>
+<span class="s"> transform.py against it and write me a report of what's wrong."</span></pre>
+        <p class="nb">You approve every command as it runs. Nothing is written except the report.</p>
+      </div>
+
+      <p class="or-direct">— or run the phases yourself —</p>
+
+<pre><span class="c"># 1 · understand the data   2 · audit the code   3 · read the report</span>
+<span class="k">semantic-enricher enrich</span> <span class="s">gs://my-bucket/source/</span> <span class="f">-o</span> <span class="s">./audit-out</span>
+<span class="k">/audit</span> <span class="s">transform.py::build_cohort</span> <span class="f">-d</span> <span class="s">./audit-out</span>     <span class="c"># in Claude Code</span>
+<span class="k">semantic-enricher view</span> <span class="s">./audit-out</span>                       <span class="c"># localhost:8458, read-only</span></pre>
+    </div>
+  </section>
+
+  <!-- LEAST PRIVILEGE RECIPES -->
+  <section id="recipes" class="alt">
+    <div class="wrap">
+      <h2><span class="num">C</span>Least-privilege recipes</h2>
+      <p class="sub">Same rule everywhere: <strong>view</strong> on the source, <strong>write</strong> only on a separate output.</p>
+<pre><span class="c"># GCS — viewer role on data, results to another bucket</span>
+<span class="k">export</span> SE_GCS_OUTPUT_URI=<span class="s">gs://my-audit-output/</span>; <span class="k">semantic-enricher enrich</span> <span class="s">gs://my-bucket/data/</span>
+<span class="c"># Iceberg / DB — read-only user, no write-back</span>
+<span class="k">semantic-enricher enrich</span> <span class="f">--namespace</span> <span class="s">my_db</span> <span class="f">--no-iceberg-write</span> <span class="f">-o</span> <span class="s">./audit-out</span>
+<span class="c"># Local — read-only mount, output elsewhere</span>
+<span class="k">semantic-enricher enrich</span> <span class="s">/mnt/data-ro</span> <span class="f">-o</span> <span class="s">~/audit-out</span></pre>
+      <p class="sub" style="margin:14px 0 0">Network: outbound HTTPS only — to your model provider (plus the open web for public-standard checks). No inbound.</p>
+    </div>
+  </section>
+
+  <!-- GUARANTEES -->
+  <section id="guarantees">
+    <div class="wrap">
+      <h2>What it does — and what it can't</h2>
+      <p class="sub">The safety story isn't a promise in a doc; it's what the permissions physically allow.</p>
+      <div class="guarantees">
+        <div class="gcol does">
+          <h3>Natural-Joints does</h3>
+          <ul>
+            <li>Read source, target, code, and context — all read-only</li>
+            <li>Build deep, domain-aware understanding of every column</li>
+            <li>Verify each step of the transformation against it</li>
+            <li>Write findings &amp; reports to an output dir you name</li>
+            <li>Run entirely from code you can read and pin</li>
+          </ul>
+        </div>
+        <div class="gcol never">
+          <h3>Natural-Joints never</h3>
+          <ul>
+            <li>Writes, updates, or deletes a source row</li>
+            <li>Needs more than a viewer role on your data</li>
+            <li>Opens an inbound port or exposes your data to the internet</li>
+            <li>Requires write access to your code repository</li>
+            <li>Sends data anywhere except your chosen model API</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="brand" style="justify-content:center;display:flex"><span class="dot"></span> Natural-Joints</div>
+    <p>AI-powered quality assurance for the data you can't afford to get wrong.</p>
+    <p>
+      <a href="https://natural-joints.com">natural-joints.com</a>
+      &nbsp;·&nbsp;
+      <a href="mailto:ran@natural-joints.com">ran@natural-joints.com</a>
+    </p>
+    <p class="small">Read-only by design. Pin the code, scope the credential, allow only egress — then let it audit.</p>
+  </div>
+</footer>
+
+<script>
+  (function(){
+    var t=document.querySelector('.nav-toggle'),l=document.querySelector('.nav-links');
+    if(!t||!l)return;
+    t.addEventListener('click',function(){l.classList.toggle('open');});
+    l.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){l.classList.remove('open');});});
+  })();
+</script>
+
+<!-- Natural-Joints analytics -->
+<script data-goatcounter="https://natural-joints.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
