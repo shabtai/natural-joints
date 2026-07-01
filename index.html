@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Natural Joints — Data QA · code · data · priors</title>
-<meta name="description" content="How to run a full Natural-Joints data audit under a zero-trust model: read-only code from git, read-only data access, outbound-only network. Install in two lines, audit in three commands.">
+<meta name="description" content="How to run a full Natural-Joints data audit under a zero-trust model: read-only code from git, read-only data access, outbound-only network. From install to audit report in five lines.">
 <link rel="icon" href="assets/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon-192.png">
@@ -307,8 +307,8 @@
       <a href="#difference">What it catches</a>
       <a href="#catch">Real catch</a>
       <a href="#trust">Trust model</a>
-      <a href="#install">Install</a>
-      <a class="nav-cta" href="#audit">Run an audit →</a>
+      <a href="#start">Get started</a>
+      <a class="nav-cta" href="#start">Run an audit →</a>
     </div>
   </div>
 </nav>
@@ -363,35 +363,51 @@
   <section id="difference" class="alt">
     <div class="wrap">
       <span class="tag">How we check the target</span>
-      <h2>Four ways to know the target is right.</h2>
-      <p class="sub">A linter checks syntax; a schema test catches a null. We check whether the numbers are actually <em>correct</em> — against the code, the data, and the domain's priors.</p>
+      <h2>Six ways to know the target is right.</h2>
+      <p class="sub">A linter checks syntax; a schema test catches a null. We check whether the numbers are actually <em>correct</em> — against the intent, the code, the data, and the domain's priors.</p>
 
       <div class="checks">
-        <div class="check">
+        <div class="check is-strength">
           <div class="cn">1</div>
-          <h3>Compare the target to priors</h3>
-          <p>Hold each result up against what the domain expects — reference values, known distributions, plausible ranges. A number that looks fine alone but contradicts the prior gets flagged.</p>
-          <div class="eg"><b>e.g.</b> a computed rate that's plausible on its own but far off the known base rate for that cohort.</div>
+          <span class="badge strength">Natural-Joints strength</span>
+          <h3>Does it match the intent?</h3>
+          <p>We read the spec, tickets, and analysis plan — then check the output actually does what it was <em>meant</em> to, not just that the code runs without error.</p>
+          <div class="eg"><b>e.g.</b> the analysis plan says "primary-analysis records only"; nothing in the code enforces it.</div>
         </div>
-        <div class="check">
+        <div class="check is-strength">
           <div class="cn">2</div>
-          <span class="badge conv">conventional debugging</span>
-          <h3>Verify the code itself</h3>
-          <p>Classic code bugs that make the transform do the wrong thing — independent of what the data means. The debugging a careful engineer already does.</p>
-          <div class="eg"><b>e.g.</b> a missing loop that processes only the first batch instead of all of them.</div>
+          <span class="badge strength">Natural-Joints strength</span>
+          <h3>Where the code meets the data</h3>
+          <p>The bugs that only appear when you understand <em>both</em> the code and what the data actually means — cohorts, confounders, batch effects, units, labels. This is what Natural-Joints is built for.</p>
+          <div class="eg"><b>e.g.</b> disease&nbsp;A needs a cohort filter the code never applies — its active flag lives in a column the transform ignored.</div>
         </div>
         <div class="check is-strength">
           <div class="cn">3</div>
           <span class="badge strength">Natural-Joints strength</span>
-          <h3>Where the code meets the data</h3>
-          <p>The bugs that only appear when you understand <em>both</em> the code and what the data actually means. This is what Natural-Joints is built for.</p>
-          <div class="eg"><b>e.g.</b> disease&nbsp;A needs a cohort filter the code never applies — its active flag lives in a column the transform ignored.</div>
+          <h3>Is the statistic sound?</h3>
+          <p>We check the claim against the data's real structure: are these truly independent samples, and is the variability biological — or driven by batch, repeated measurements, or the wrong unit of analysis?</p>
+          <div class="eg"><b>e.g.</b> a result over "thousands of cells" that all come from one donor — an n of&nbsp;1, not thousands.</div>
         </div>
-        <div class="check">
+        <div class="check is-strength">
           <div class="cn">4</div>
+          <span class="badge strength">Natural-Joints strength</span>
+          <h3>Compare the target to priors</h3>
+          <p>Hold each result up against what the domain expects — reference values, known distributions, plausible ranges. A number that looks fine alone but contradicts the prior gets flagged.</p>
+          <div class="eg"><b>e.g.</b> a computed rate that's plausible on its own but far off the known base rate for that cohort.</div>
+        </div>
+        <div class="check is-strength">
+          <div class="cn">5</div>
+          <span class="badge strength">Natural-Joints strength</span>
           <h3>Catch corrupted source data</h3>
           <p>Sometimes the input is already wrong. Deep understanding lets us see when the same thing is recorded two ways, or when a value simply can't be real.</p>
-          <div class="eg"><b>e.g.</b> one disease under two names so a join silently splits it — or a male result in a women's-only panel, an impossible weight or birth date.</div>
+          <div class="eg"><b>e.g.</b> one disease under two names so a join silently splits it — a patient who gains 20&nbsp;kg in a day, or a male result in a women's-only panel.</div>
+        </div>
+        <div class="check">
+          <div class="cn">6</div>
+          <span class="badge conv">conventional debugging</span>
+          <h3>Verify the code itself</h3>
+          <p>Classic code bugs that make the transform do the wrong thing — independent of what the data means. The debugging a careful engineer already does.</p>
+          <div class="eg"><b>e.g.</b> a missing loop that processes only the first batch instead of all of them.</div>
         </div>
       </div>
 
@@ -456,63 +472,18 @@
     </div>
   </section>
 
-  <!-- INSTALL -->
-  <section id="install" class="alt">
+  <!-- GET STARTED -->
+  <section id="start" class="alt">
     <div class="wrap">
-      <h2><span class="num">A</span>Install it</h2>
-      <p class="sub">You don't have to know the package layout, the right extras, or how to wire a key. The simplest path is to let an agent do it — and watch every step.</p>
-
-      <div class="recommended">
-        <span class="pill">◆ Recommended</span>
-        <h3>Let Claude Code guide the install</h3>
-        <p>Open <a href="https://claude.com/claude-code" style="color:#7ee0a6">Claude Code</a> in an empty folder and just ask. It fetches the engine over read-only git, installs the package, picks the right extras for your data, and prompts you for the one secret it needs.</p>
-<pre><span class="s">"Install Natural-Joints (the semantic-enricher engine)</span>
-<span class="s"> and walk me through running my first audit."</span></pre>
-        <p class="nb">You approve each command as it runs. The only secret it ever asks for is your model API key — nothing else touches your machine.</p>
-      </div>
-
-      <p class="or-direct">— or install it directly —</p>
-<pre><span class="k">pip install</span> <span class="s">"semantic-enricher[gcs]"</span>      <span class="c"># or [iceberg], [r], [sas], [clinical]</span>
-<span class="k">export</span> ANTHROPIC_API_KEY=<span class="s">sk-ant-...</span>     <span class="c"># or GOOGLE_API_KEY=... — the only secret needed</span></pre>
-    </div>
-  </section>
-
-  <!-- AUDIT IN THREE COMMANDS -->
-  <section id="audit">
-    <div class="wrap">
-      <h2><span class="num">B</span>From zero to an audit report</h2>
-      <p class="sub">Same as the install — the simplest path is to ask Claude Code. It enriches your data, reads the code against that understanding, and writes the report. You approve every step.</p>
-
-      <div class="recommended">
-        <span class="pill">◆ Recommended</span>
-        <h3>Ask Claude Code to run the audit</h3>
-        <p>Open <a href="https://claude.com/claude-code" style="color:#7ee0a6">Claude Code</a> where your data and code live, and describe the audit. It runs the deep-understanding pass, checks the transformation against it, and surfaces the findings — all read-only.</p>
-<pre><span class="s">"Audit this pipeline — enrich the source data, then check</span>
-<span class="s"> transform.py against it and write me a report of what's wrong."</span></pre>
-        <p class="nb">You approve every command as it runs. Nothing is written except the report.</p>
-      </div>
-
-      <p class="or-direct">— or run the phases yourself —</p>
-
-<pre><span class="c"># 1 · understand the data   2 · audit the code   3 · read the report</span>
-<span class="k">semantic-enricher enrich</span> <span class="s">gs://my-bucket/source/</span> <span class="f">-o</span> <span class="s">./audit-out</span>
-<span class="k">/audit</span> <span class="s">transform.py::build_cohort</span> <span class="f">-d</span> <span class="s">./audit-out</span>     <span class="c"># in Claude Code</span>
-<span class="k">semantic-enricher view</span> <span class="s">./audit-out</span>                       <span class="c"># localhost:8458, read-only</span></pre>
-    </div>
-  </section>
-
-  <!-- LEAST PRIVILEGE RECIPES -->
-  <section id="recipes" class="alt">
-    <div class="wrap">
-      <h2><span class="num">C</span>Least-privilege recipes</h2>
-      <p class="sub">Same rule everywhere: <strong>view</strong> on the source, <strong>write</strong> only on a separate output.</p>
-<pre><span class="c"># GCS — viewer role on data, results to another bucket</span>
-<span class="k">export</span> SE_GCS_OUTPUT_URI=<span class="s">gs://my-audit-output/</span>; <span class="k">semantic-enricher enrich</span> <span class="s">gs://my-bucket/data/</span>
-<span class="c"># Iceberg / DB — read-only user, no write-back</span>
-<span class="k">semantic-enricher enrich</span> <span class="f">--namespace</span> <span class="s">my_db</span> <span class="f">--no-iceberg-write</span> <span class="f">-o</span> <span class="s">./audit-out</span>
-<span class="c"># Local — read-only mount, output elsewhere</span>
-<span class="k">semantic-enricher enrich</span> <span class="s">/mnt/data-ro</span> <span class="f">-o</span> <span class="s">~/audit-out</span></pre>
-      <p class="sub" style="margin:14px 0 0">Network: outbound HTTPS only — to your model provider (plus the open web for public-standard checks). No inbound.</p>
+      <span class="tag">Get started</span>
+      <h2>From install to audit report.</h2>
+      <p class="sub">Simplest path: open <a href="https://claude.com/claude-code">Claude Code</a> where your data and code live and ask it to <em>"install Natural-Joints and audit this pipeline"</em> — it fetches the engine over read-only git, picks the right extras, and runs each step for your approval. Or do it yourself in five lines:</p>
+<pre><span class="k">pip install</span> <span class="s">"semantic-enricher[clinical]"</span>                <span class="c"># install · or [gcs] [iceberg] [r] [sas]</span>
+<span class="k">export</span> ANTHROPIC_API_KEY=<span class="s">sk-ant-...</span>                     <span class="c"># the only secret it ever needs</span>
+<span class="k">semantic-enricher enrich</span> <span class="s">gs://my-bucket/source/</span> <span class="f">-o</span> <span class="s">./audit-out</span> <span class="c"># 1 · understand the data</span>
+<span class="k">/audit</span> <span class="s">transform.py::build_cohort</span> <span class="f">-d</span> <span class="s">./audit-out</span>           <span class="c"># 2 · audit the code (in Claude Code)</span>
+<span class="k">semantic-enricher view</span> <span class="s">./audit-out</span>                         <span class="c"># 3 · read the report · localhost:8458</span></pre>
+      <p class="sub" style="margin:14px 0 0">Least privilege throughout: a <strong>viewer</strong> role on the source, <strong>write</strong> only to a separate output, outbound HTTPS only — no inbound, no write-back.</p>
     </div>
   </section>
 
