@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Pilot benchmark: does semantic enrichment help LLM agents read opaque (zero-signal) third-party data?">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#129516;</text></svg>">
+<title>Enrichment vs. model size on opaque data — a pilot benchmark</title>
+<style>
+  :root{
+    --paper:#fcfcfb; --panel:#ffffff; --ink:#171b1f; --muted:#5c6870; --faint:#8794a0;
+    --rule:#e6e9ea; --rule-strong:#d3d8da;
+    --accent:#0a6e78; --accent-soft:#e2f0f1;
+    --pass:#1c7d54; --pass-bg:#e7f4ec; --fail:#b0472f; --fail-bg:#f8ece8;
+    --code-bg:#f2f4f4;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,Cambria,serif;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,"Cascadia Code","DejaVu Sans Mono",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --paper:#0e1215; --panel:#151b1f; --ink:#e7ecee; --muted:#9aa7ad; --faint:#6f7d84;
+      --rule:#232c31; --rule-strong:#313d43;
+      --accent:#4bb8c4; --accent-soft:#123338;
+      --pass:#54c98d; --pass-bg:#122a20; --fail:#e28a72; --fail-bg:#2c1c17;
+      --code-bg:#1a2126;
+    }
+  }
+  :root[data-theme="light"]{
+    --paper:#fcfcfb; --panel:#ffffff; --ink:#171b1f; --muted:#5c6870; --faint:#8794a0;
+    --rule:#e6e9ea; --rule-strong:#d3d8da; --accent:#0a6e78; --accent-soft:#e2f0f1;
+    --pass:#1c7d54; --pass-bg:#e7f4ec; --fail:#b0472f; --fail-bg:#f8ece8; --code-bg:#f2f4f4;
+  }
+  :root[data-theme="dark"]{
+    --paper:#0e1215; --panel:#151b1f; --ink:#e7ecee; --muted:#9aa7ad; --faint:#6f7d84;
+    --rule:#232c31; --rule-strong:#313d43; --accent:#4bb8c4; --accent-soft:#123338;
+    --pass:#54c98d; --pass-bg:#122a20; --fail:#e28a72; --fail-bg:#2c1c17; --code-bg:#1a2126;
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:var(--serif);font-size:18px;line-height:1.62;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+  .wrap{max-width:44rem;margin:0 auto;padding:clamp(1.4rem,4vw,4rem) clamp(1.1rem,4vw,2rem) 5rem;}
+
+  .eyebrow{font-family:var(--sans);font-size:.72rem;font-weight:600;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--accent);margin:0 0 1.1rem;}
+  h1{font-size:clamp(2rem,5.5vw,2.9rem);line-height:1.08;font-weight:600;margin:0 0 .5rem;
+    letter-spacing:-.01em;text-wrap:balance;}
+  .sub{font-size:1.18rem;color:var(--muted);margin:0 0 1.4rem;text-wrap:balance;font-style:italic;}
+
+  .meta{display:flex;flex-wrap:wrap;gap:.5rem .5rem;font-family:var(--mono);font-size:.74rem;
+    margin:0 0 2.2rem;padding-top:1.1rem;border-top:1px solid var(--rule);}
+  .tag{border:1px solid var(--rule-strong);border-radius:2px;padding:.2rem .5rem;color:var(--muted);
+    white-space:nowrap;}
+  .tag.warn{color:var(--fail);border-color:var(--fail);}
+
+  h2{font-size:1.5rem;font-weight:600;margin:3.2rem 0 .3rem;letter-spacing:-.005em;
+    display:flex;align-items:baseline;gap:.6rem;text-wrap:balance;}
+  h2 .n{font-family:var(--mono);font-size:.85rem;color:var(--accent);font-weight:600;
+    border:1px solid var(--accent);border-radius:2px;padding:.05rem .38rem;flex:none;
+    transform:translateY(-.15em);}
+  h3{font-size:1.08rem;font-weight:600;margin:2rem 0 .2rem;color:var(--ink);}
+  p{margin:.75rem 0;}
+  a{color:var(--accent);}
+  strong{font-weight:600;}
+  code,.m{font-family:var(--mono);font-size:.82em;background:var(--code-bg);
+    padding:.06em .34em;border-radius:3px;}
+  .lead{font-size:1.06rem;}
+
+  .abstract{background:var(--panel);border:1px solid var(--rule);border-left:3px solid var(--accent);
+    border-radius:4px;padding:1.2rem 1.4rem;margin:1.6rem 0 .5rem;}
+  .abstract p{margin:.5rem 0;}
+  .abstract .k{font-family:var(--sans);font-size:.7rem;font-weight:700;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--accent);}
+
+  figure{margin:1.7rem 0;}
+  figcaption{font-family:var(--sans);font-size:.78rem;color:var(--muted);margin-top:.6rem;
+    line-height:1.5;}
+  .scroll{overflow-x:auto;border:1px solid var(--rule);border-radius:5px;background:var(--panel);}
+  table{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:.82rem;
+    font-variant-numeric:tabular-nums;}
+  th,td{text-align:left;padding:.55rem .7rem;border-bottom:1px solid var(--rule);white-space:nowrap;}
+  thead th{font-size:.7rem;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);
+    font-weight:600;border-bottom:1px solid var(--rule-strong);background:var(--code-bg);}
+  tbody tr:last-child td{border-bottom:none;}
+  td.num,th.num{text-align:right;}
+  .rowhead{color:var(--ink);}
+  tr.hi td{background:var(--accent-soft);}
+  tr.total td{border-top:2px solid var(--rule-strong);font-weight:600;color:var(--ink);}
+
+  .p,.f{display:inline-block;min-width:1.55rem;text-align:center;border-radius:3px;
+    padding:.05rem .3rem;font-weight:600;font-size:.78rem;}
+  .p{color:var(--pass);background:var(--pass-bg);}
+  .f{color:var(--fail);background:var(--fail-bg);}
+  .p.b{opacity:.55;}.f.b{opacity:.62;}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin:1.2rem 0;}
+  @media(max-width:540px){.grid2{grid-template-columns:1fr;}}
+  .cell{border:1px solid var(--rule);border-radius:5px;padding:.9rem 1rem;background:var(--panel);}
+  .cell .lab{font-family:var(--sans);font-size:.68rem;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--muted);}
+  .cell .big{font-family:var(--mono);font-size:1.5rem;font-weight:600;color:var(--ink);
+    margin-top:.15rem;font-variant-numeric:tabular-nums;}
+  .cell .big .win{color:var(--pass);}
+  .cell .det{font-family:var(--mono);font-size:.76rem;color:var(--muted);margin-top:.2rem;}
+
+  ol.q{list-style:none;counter-reset:q;padding:0;margin:1.2rem 0;}
+  ol.q li{counter-increment:q;border-bottom:1px solid var(--rule);padding:.75rem 0;
+    display:grid;grid-template-columns:2.1rem 1fr;gap:.2rem .7rem;}
+  ol.q li::before{content:"se_0" counter(q);font-family:var(--mono);font-size:.72rem;
+    color:var(--accent);padding-top:.15rem;}
+  ol.q .qt{font-size:.98rem;}
+  ol.q .tr{grid-column:2;font-size:.86rem;color:var(--muted);margin-top:.15rem;}
+  ol.q .tr b{color:var(--fail);font-weight:600;font-style:normal;}
+  ol.q .tr i{color:var(--pass);font-style:normal;font-weight:600;}
+
+  .note{border-left:2px solid var(--rule-strong);padding:.2rem 0 .2rem 1rem;color:var(--muted);
+    font-size:.96rem;margin:1.1rem 0;}
+  hr{border:none;border-top:1px solid var(--rule);margin:3rem 0;}
+  .foot{font-family:var(--sans);font-size:.8rem;color:var(--faint);margin-top:3rem;
+    padding-top:1.2rem;border-top:1px solid var(--rule);line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Natural-Joints · Pilot benchmark</p>
+  <h1>Enrichment helps — and helps the frontier model most</h1>
+  <p class="sub">Does a pre-computed semantic layer help an LLM agent answer questions correctly on data whose schema it can't recognize? A small, honest test on masked biological data.</p>
+  <div class="meta">
+    <span class="tag">Dataset: LINCS L1000 (masked)</span>
+    <span class="tag">9 trap questions</span>
+    <span class="tag">Haiku 4.5 · Opus 4.8</span>
+    <span class="tag warn">Single seed — pilot, not final</span>
+    <span class="tag">Scored by hand</span>
+  </div>
+
+  <div class="abstract">
+    <p><span class="k">In one line.</span> On data an LLM can't recognize, Natural-Joints' enrichment raised a <em>cheap</em> model from 3/9 to 5/9 correct, and a <em>frontier</em> model from 4/9 to <strong>8/9</strong> — so the enrichment lifted the expensive model <em>more</em> than the cheap one, and a cheap model plus enrichment matched the frontier model alone at a quarter of the cost.</p>
+    <p><span class="k">Two takeaways.</span> (1) <strong>Augmentation:</strong> your frontier model + enrichment (8/9) far outperforms your frontier model alone (4/9). (2) <strong>Cost:</strong> cheap + enrichment (5/9, $0.07) beats expensive alone (4/9, $0.26) — better answers, ¼ the price, half the time.</p>
+  </div>
+
+  <h2><span class="n">1</span> The question</h2>
+  <p class="lead">A modern LLM is a strong data analyst when it <em>recognizes</em> the data. Point it at MIMIC or a famous gene table and it already knows the schema, the gotchas, the conventions. The interesting question is what happens when it <em>doesn't</em> — when the columns are opaque and every convention has to be read from the bytes, not recalled from training.</p>
+  <p>That's the setting where a semantic-enrichment layer should earn its keep: it profiles the raw tables once, works out what each column means and where the traps are, and hands the agent a short brief. This benchmark measures exactly that — the same questions, the same models, with and without the enrichment brief — on data engineered to be unrecognizable: a stand-in for the opaque third-party and legacy tables that enrichment already cracks in practice.</p>
+
+  <h2><span class="n">2</span> The dataset: a zero-signal replication</h2>
+  <p>This is not an artificial stress test — it reproduces a situation Natural-Joints was built for. When you inherit third-party or legacy tables with no documentation, no schema you recognize, and no domain conventions to lean on, all the <em>signal</em> a model normally relies on is gone. Enrichment is what cracked those opaque tables in practice; this benchmark recreates that <strong>zero-signal</strong> case under controlled conditions so the effect can be measured.</p>
+  <p>To do that we take a real perturbation dataset (LINCS L1000) and <strong>hash</strong> every table, column, and categorical value. Columns become <span class="m">num_d1</span>, <span class="m">cat_c1</span>, <span class="m">id_d</span>; values become codes like <span class="m">PTYPE_8E478</span> and <span class="m">DU_729BF</span>; missing data hides behind the sentinel <span class="m">-666</span>. No model has a prior — exactly like real undocumented data, the only way to answer is to inspect the bytes.</p>
+  <p>Underneath the masking sit the classic analysis traps that make real biological data dangerous: a missing-value sentinel that poisons averages, duplicate keys that make joins fan out, quality flags that must be applied, control rows mixed in with treatments, and one measurement column that silently mixes units. Nine questions each target one trap.</p>
+
+  <h2><span class="n">3</span> The nine questions</h2>
+  <p>Each question has an obvious wrong answer (the trap) and a correct one that requires spotting a data hazard. In red, what a naive analyst reports; in green, what a correct answer must do.</p>
+  <ol class="q">
+    <li><span class="qt">Mean of <span class="m">num_a1</span> (donor age)?</span>
+      <span class="tr"><b>−388</b> — dragged negative by 60 <span class="m">-666</span> rows. <i>50.4</i> after excluding the sentinel.</span></li>
+    <li><span class="qt">Average <span class="m">num_dm1</span> per perturbagen?</span>
+      <span class="tr"><b>wrong-grain</b> — join through the instance table and it inflates. <i>≈0.24</i> at signature grain, sentinel excluded.</span></li>
+    <li><span class="qt">Rows from joining <span class="m">entity_c</span> × <span class="m">entity_c_metrics</span> on <span class="m">id_c</span>?</span>
+      <span class="tr"><b>53,903 as real records</b>. <i>Recognize the duplicate-key fan-out</i> — the key isn't unique.</span></li>
+    <li><span class="qt">Combine <span class="m">fact_d</span> + <span class="m">fact_d_metrics</span>, one row per signature?</span>
+      <span class="tr"><b>join on id_d → 688,599 rows</b>. <i>They're row-aligned — combine positionally → 473,647</i>.</span></li>
+    <li><span class="qt">Best "high-quality" subset of signatures?</span>
+      <span class="tr"><b>filter on metric thresholds</b>. <i>Use the quality flags</i> (<span class="m">is_exemplar</span> / <span class="m">is_touchstone</span>).</span></li>
+    <li><span class="qt">How many <em>treatment</em> perturbations?</span>
+      <span class="tr"><b>49,991 — includes controls</b>. <i>Exclude the <span class="m">ctl_*</span> types → 49,919</i>.</span></li>
+    <li><span class="qt">Median dose (<span class="m">num_d1</span>)?</span>
+      <span class="tr"><b>one median (~2–3)</b> blending incompatible units. <i>Units live in <span class="m">cat_d1</span> — report per unit</i>.</span></li>
+    <li><span class="qt">How many distinct cell lines?</span>
+      <span class="tr"><b>98 rows = 98 lines</b>. <i>Lineage collapses them to 82 base lines</i>.</span></li>
+    <li><span class="qt">Fraction of genes with <span class="m">flag_b1</span> = 1?</span>
+      <span class="tr"><b>treat flags as mutually exclusive</b>. <i>978 / 12,328 = 7.93%; the flags are nested</i>.</span></li>
+  </ol>
+
+  <h2><span class="n">4</span> Method: four arms, scored by hand</h2>
+  <p>Every question is run through four arms — two models, each with and without enrichment:</p>
+  <div class="grid2">
+    <div class="cell"><div class="lab">Raw (blind)</div><div class="det">Model + the raw hashed CSVs only, in a clean sandbox. No enrichment, no recall.</div></div>
+    <div class="cell"><div class="lab">Brief (enriched)</div><div class="det">Same, plus Natural-Joints' deterministic query brief — the semantic layer and detected hazards for the tables in play.</div></div>
+    <div class="cell"><div class="lab">Haiku 4.5</div><div class="det">The cheap model. Fast, ~15× cheaper per token than the frontier model.</div></div>
+    <div class="cell"><div class="lab">Opus 4.8</div><div class="det">The frontier model. Strong reasoning, slow and expensive.</div></div>
+  </div>
+  <h3>Why we scored by hand</h3>
+  <p>The answers are free text, so scoring needs a judge — and here the judging was the hardest part. A lenient LLM judge (matching answer shape) rated raw-Opus <strong>6/9</strong>; a strict judge grounded in a written gold rated the very same answers <strong>1/9</strong>. Both are wrong: the strict judge failed answers that <em>correctly avoided the trap</em> but stated a value slightly off from the gold, and it over-penalized honest hedging.</p>
+  <p>So the final scores are <strong>adjudicated by hand</strong> against a written gold, one rule applied to every arm: <span style="color:var(--pass);font-weight:600">PASS</span> = committed to a trap-avoiding answer; <span style="color:var(--fail);font-weight:600">FAIL</span> = reported the trap answer, or hedged without committing. This is the number we trust — and it's the reason this is a pilot, not a leaderboard.</p>
+
+  <h2><span class="n">5</span> Results</h2>
+  <p>The headline is the 2×2 — accuracy, cost, and wall-clock time per query, for each model with and without enrichment.</p>
+  <figure>
+    <div class="scroll"><table>
+      <thead><tr><th>Arm</th><th class="num">Correct</th><th class="num">Cost / query</th><th class="num">Time / query</th></tr></thead>
+      <tbody>
+        <tr><td class="rowhead">raw · Haiku</td><td class="num">3 / 9</td><td class="num">$0.028</td><td class="num">19.9 s</td></tr>
+        <tr><td class="rowhead">brief · Haiku</td><td class="num">5 / 9</td><td class="num">$0.072</td><td class="num">45.9 s</td></tr>
+        <tr><td class="rowhead">raw · Opus</td><td class="num">4 / 9</td><td class="num">$0.262</td><td class="num">88.6 s</td></tr>
+        <tr class="hi"><td class="rowhead">brief · Opus</td><td class="num">8 / 9</td><td class="num">$0.771</td><td class="num">100.2 s</td></tr>
+      </tbody>
+    </table></div>
+    <figcaption>Enrichment lift: Haiku <b>+2</b> (3→5), Opus <b>+4</b> (4→8). The enrichment helped the frontier model more than the cheap one. Note too that <span class="m">brief·Haiku</span> (5/9, $0.072, 46&nbsp;s) beats <span class="m">raw·Opus</span> (4/9, $0.262, 89&nbsp;s) on all three axes.</figcaption>
+  </figure>
+
+  <h3>Per-question detail</h3>
+  <p>The same four arms, question by question. A borderline call is shown faded.</p>
+  <figure>
+    <div class="scroll"><table>
+      <thead><tr><th>Q</th><th>trap</th>
+        <th style="text-align:center">raw·H</th><th style="text-align:center">brief·H</th>
+        <th style="text-align:center">raw·O</th><th style="text-align:center">brief·O</th></tr></thead>
+      <tbody>
+        <tr><td>se_01</td><td>sentinel</td><td style="text-align:center"><span class="p">P</span></td><td style="text-align:center"><span class="p">P</span></td><td style="text-align:center"><span class="p">P</span></td><td style="text-align:center"><span class="p">P</span></td></tr>
+        <tr><td>se_02</td><td>grain</td><td style="text-align:center"><span class="f">F</span></td><td style="text-align:center"><span class="f">F</span></td><td style="text-align:center"><span class="f">F</span></td><td style="text-align:center"><span class="p">P</span></td></tr>
+        <tr><td>se_03</td><td>join fan-out</td><td style="text-align:center"><span class="p">P</span></td><td style="text-align:center"><span class="p">P</span></td><td style="text-align:center"><span class="p">P</span></td><td style="text-align:center"><span class="p">P</span></td></tr>
+        <tr><td>se_04</td><td>row-align</td><td style="text-align:center"><span class="f">F</span></td><td style="text-align:center"><span class="f">F</span></td><td style="text-align:center"><span class="f">F</span></td><td style="text-align:center"><span class="f b">F</span></td></tr>
+        <tr><td>se_05</td><td>quality flags</td><td style="text-align:center"><span class="f">F</span></td><td style="text-align:center"><span class="p">P</span></td><td style="text-align:center"><span class="f">F</span></td><td style="text-align:center"><span class="p">P</span></td></tr>
+        <tr><td>se_06</td><td>controls</td><td style="text-align:center"><span class="f">F</span></td><td style="text-align:center"><span class="f">F</span></td><td style="text-align:center"><span class="p">P</span></td><td style="text-align:center"><span class="p">P</span></td></tr>
+        <tr><td>se_07</td><td>mixed units</td><td style="text-align:center"><span class="f">F</span></td><td style="text-align:center"><span class="f">F</span></td><td style="text-align:center"><span class="f">F</span></td><td style="text-align:center"><span class="p">P</span></td></tr>
+        <tr><td>se_08</td><td>lineage</td><td style="text-align:center"><span class="f">F</span></td><td style="text-align:center"><span class="p">P</span></td><td style="text-align:center"><span class="f">F</span></td><td style="text-align:center"><span class="p">P</span></td></tr>
+        <tr><td>se_09</td><td>nested flags</td><td style="text-align:center"><span class="p">P</span></td><td style="text-align:center"><span class="p">P</span></td><td style="text-align:center"><span class="p">P</span></td><td style="text-align:center"><span class="p">P</span></td></tr>
+        <tr class="total"><td>Total</td><td></td><td class="num" style="text-align:center">3</td><td class="num" style="text-align:center">5</td><td class="num" style="text-align:center">4</td><td class="num" style="text-align:center">8</td></tr>
+      </tbody>
+    </table></div>
+    <figcaption>Arms trade wins — no single one dominates every row. Enrichment adds se_05/se_08 for Haiku; the frontier model, once enriched, additionally clears se_02, se_06, and se_07. se_04 (both tables are row-aligned splits) is the one trap no arm reliably caught.</figcaption>
+  </figure>
+
+  <h3>Why enrichment costs 3× the cheap raw run</h3>
+  <p>A fair question: <span class="m">brief·Haiku</span> costs and takes ~3× <span class="m">raw·Haiku</span>. The reason isn't the brief's text — that rides in the cached prompt and is nearly free. It's the <strong>verification work the brief prescribes</strong>: for each hazard, check it against the data, apply it, self-verify the number, state the caveat.</p>
+  <figure>
+    <div class="scroll"><table>
+      <thead><tr><th>Haiku arm</th><th class="num">input tok</th><th class="num">output tok</th><th class="num">cache tok</th><th class="num">turns</th></tr></thead>
+      <tbody>
+        <tr><td class="rowhead">raw</td><td class="num">86</td><td class="num">1,330</td><td class="num">111k</td><td class="num">5.0</td></tr>
+        <tr><td class="rowhead">brief</td><td class="num">39</td><td class="num">3,899</td><td class="num">173k</td><td class="num">5.9</td></tr>
+      </tbody>
+    </table></div>
+    <figcaption>Output tokens roughly triple (1,330 → 3,899); fresh input is flat. That extra output <em>is</em> the trap-catching work — the same effort that turns 3/9 into 5/9. It's a tradeoff, not waste.</figcaption>
+  </figure>
+
+  <h2><span class="n">6</span> What it means</h2>
+  <p><strong>Enrichment is not just a crutch for weak models.</strong> The instinct is that a semantic layer helps a small model punch above its weight. It does — but it helped the <em>frontier</em> model more (+4 vs +2). Given opaque data, even a strong reasoner burns effort re-deriving what the layer already knows; hand it the map and it pulls further ahead. That makes the cleaner pitch an <em>augmentation</em> one: <strong>whatever model you already run, enrichment makes it materially better</strong> — here, 4/9 → 8/9.</p>
+  <p><strong>Enrichment can substitute for model spend.</strong> A cheap model with the brief (5/9, $0.072, 46&nbsp;s) beat a frontier model without it (4/9, $0.262, 89&nbsp;s) on accuracy, cost, and time at once. Adding an enrichment layer outperformed upgrading the model — at a quarter of the price.</p>
+  <p><strong>The remaining ceiling is adherence, not detection.</strong> Where the enriched runs still failed, it usually wasn't because the layer missed the hazard — it detected and surfaced the right one — but because a small model, handed ten hazards at once, dismissed the relevant one. That points at surfacing fewer, sharper hazards, not at more detection.</p>
+
+  <p class="foot">Natural-Joints — semantic enrichment &amp; QA for scientific data. Pilot benchmark on masked LINCS L1000, Haiku&nbsp;4.5 / Opus&nbsp;4.8, single seed, hand-adjudicated against a written gold. Figures are per-query means over nine questions.</p>
+
+</div>
+</body>
+</html>
